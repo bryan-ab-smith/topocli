@@ -1,0 +1,17 @@
+{
+  "name": "topocli",
+  "version": "1.0.0",
+  "description": "CLI tool to access Topomapper data.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bryan Smith",
+  "license": "MIT",
+  "dependencies": {
+    "array-unique": "^0.3.2",
+    "chalk": "^2.3.2",
+    "multiple-requests-promise": "^1.0.0",
+    "request": "^2.85.0"
+  }
+}
