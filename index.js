@@ -9,6 +9,7 @@ var unique = require('array-unique');
 var chalk = require('chalk');
 
 var config = require('./config.json');
+var baseURL = 'https://www.bryanabsmith.com/topomapper/datafiles/';
 
 var df = config.dataFiles;
 var showDesc = config.showDesc;
@@ -16,17 +17,14 @@ var showDesc = config.showDesc;
 var wholeList = [];
 var wholeRefs = [];
 
-/* 
-    - getData(dataFile)
-    - Parameter(s):
-        - dataFile - name of the JSON file to pull down and parse. The file name here is combined with the base URL (https://www.bryanabsmith.com/topomapper/--dataFile--.json)
-*/
+var chartData = [];
+
 function getData(dataFile) {
     var count = 0;
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await
     return new Promise(resolve => {
         var names = [];
-        request('https://www.bryanabsmith.com/topomapper/js/' + dataFile + '.json', function (error, response, body) {
+        request(baseURL + dataFile + '.json', function (error, response, body) {
             var parsed = JSON.parse(body);
 
             while (true) {
@@ -50,41 +48,84 @@ function getData(dataFile) {
                 }
             }
             resolve(unique(names).length);
-            //resolve(null);
         });
     });
 }
 
-/* 
-    - getAllData()
-    - Parameter(s):
-        - N/A
-*/
+function parsedData(dataFile, parseKey, parseValue) {
+    var count = 0;
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await
+    return new Promise(resolve => {
+        var names = [];
+        request(baseURL + dataFile + '.json', function (error, response, body) {
+            var parsed = JSON.parse(body);
+
+            while (true) {
+                try {
+                    if (parseKey == 'toponym') {
+                        if (parsed.features[count].properties.name.indexOf(parseValue) > -1) {
+                            if (showDesc == true) {
+                                wholeList.push(parsed.features[count].properties.name + ' - ' + parsed.features[count].properties.description);
+                            } else {
+                                wholeList.push(parsed.features[count].properties.name);
+                            }
+                            
+                            names.push(parsed.features[count].properties.name);
+                            
+                            var tempRefs = parsed.features[count].properties.refs.split('<br \\>');
+                            for (x in tempRefs) {
+                                wholeRefs.push(tempRefs[x]);
+                            }
+                        }
+                    } else if (parseKey == 'desc') {
+                        if (parsed.features[count].properties.description.indexOf(parseValue) > -1) {
+                            if (showDesc == true) {
+                                wholeList.push(parsed.features[count].properties.name + ' - ' + parsed.features[count].properties.description);
+                            } else {
+                                wholeList.push(parsed.features[count].properties.name);
+                            }
+                            
+                            names.push(parsed.features[count].properties.name);
+                            
+                            var tempRefs = parsed.features[count].properties.refs.split('<br \\>');
+                            for (x in tempRefs) {
+                                wholeRefs.push(tempRefs[x]);
+                            }
+                        }
+                    }
+                    
+                    count++;
+                } catch (TypeError) {
+                    break;
+                }
+            }
+            resolve(unique(names).length);
+        });
+    });
+}
+
+
 async function getAllData() {
     for (var x = 0; x < df.length; x++) {
-        //console.log(chalk.green('Getting ' + df[x] + '...'));
         var y = await getData(df[x]);
-        //console.log(chalk.blue('--> Collected ' + y + ' toponyms.'));
     }
-    /*console.log('\n\n' + chalk.yellow('Final Toponym List'));
-    console.log(unique(wholeList).sort());
-    console.log('\n\n' + chalk.yellow('Final Reference List'));
-    console.log(unique(wholeRefs).sort());*/
     console.log([unique(wholeList).sort(), unique(wholeRefs).sort()])
 }
 
 async function getSomeData(splitArray) {
     for (var x = 0; x < splitArray.length; x++) {
-        //console.log(chalk.green('Getting ' + splitArray[x] + '...'));
         var y = await getData(splitArray[x]);
-        //console.log(chalk.blue('--> Collected ' + y + ' toponyms.'));
     }
-    /*console.log('\n\n' + chalk.yellow('Final Toponym List'));
-    console.log(unique(wholeList).sort());
-    console.log('\n\n' + chalk.yellow('Final Reference List'));
-    console.log(unique(wholeRefs).sort());*/
     console.log([unique(wholeList).sort(), unique(wholeRefs).sort()])
 }
+
+async function getParsedData(key, value) {
+    for (var x = 0; x < df.length; x++) {
+        var y = await parsedData(df[x], key, value);
+    }
+    console.log([unique(wholeList).sort(), unique(wholeRefs).sort()])
+}
+
 
 function help() {
     console.log(chalk.yellow('Commands:'));
@@ -100,8 +141,10 @@ function help() {
 }
 
 var params = process.argv;
+console.log(process.argv[4])
 
 if (params[2] == '--all') { getAllData(); }
 else if (params[2] == '--some') { getSomeData(params[3].split(',')) }
+else if (params[2] == '--parsed') { getParsedData(params[3], params[4]) }
 else if (params[2] == '--help') { help() }
 else { console.log('Command not recognized.') }
